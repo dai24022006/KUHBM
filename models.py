@@ -38,16 +38,37 @@ class Room(db.Model):
 
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=False)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('user.id'),
+        nullable=True
+    )
+    guest_name = db.Column(db.String(100), nullable=True)
+    guest_phone = db.Column(db.String(20), nullable=True)
+    booking_source = db.Column(
+        db.String(20),
+        nullable=False,
+        default='online'
+    )
+    room_id = db.Column(
+        db.Integer,
+        db.ForeignKey('room.id'),
+        nullable=False
+    )
     check_in = db.Column(db.Date, nullable=False)
     check_out = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='confirmed')  # confirmed, checked_in, checked_out, cancelled
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default='confirmed'
+    )
     total_price = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    service_requests = db.relationship('ServiceRequest', backref='booking', lazy=True)
-
+    service_requests = db.relationship(
+        'ServiceRequest',
+        backref='booking',
+        lazy=True
+    )
 
 class ServiceRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)

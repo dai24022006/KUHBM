@@ -51,9 +51,12 @@ def book():
                 booked_ids = [r[0] for r in booked_room_ids]
 
                 query = Room.query.filter(
-                    Room.status == 'available',
+                    Room.status != 'maintenance',
                     ~Room.id.in_(booked_ids)
                 )
+
+                if ci == date.today():
+                    query = query.filter(Room.status == 'available')
                 if room_type:
                     query = query.filter_by(type=room_type)
                 available_rooms = query.all()
@@ -64,29 +67,83 @@ def book():
                            check_in=check_in, check_out=check_out, room_type=room_type)
 
 
+
 @guest_bp.route('/book/confirm/<int:room_id>', methods=['POST'])
 @login_required
 @guest_required
 def confirm_booking(room_id):
     check_in = request.form.get('check_in')
     check_out = request.form.get('check_out')
+
     try:
         ci = datetime.strptime(check_in, '%Y-%m-%d').date()
         co = datetime.strptime(check_out, '%Y-%m-%d').date()
     except (ValueError, TypeError):
-        flash('Invalid dates.', 'danger')
+        flash('Ngày đặt phòng không hợp lệ.', 'danger')
         return redirect(url_for('guest.book'))
 
-    room = Room.query.get_or_404(room_id)
-    nights = (co - ci).days
-    total = room.base_price * nights
+    if ci < date.today() or co <= ci:
+        flash('Ngày nhận hoặc trả phòng không hợp lệ.', 'danger')
+        return redirect(url_for('guest.book'))
 
-    booking = Booking(user_id=current_user.id, room_id=room_id,
-                      check_in=ci, check_out=co, total_price=total)
-    db.session.add(booking)
-    db.session.commit()
-    flash(f'Booking confirmed! Room {room.number} for {nights} night(s). Total: AED {total:.2f}', 'success')
+    room = db.get_or_404(Room, room_id)
+
+    if room.status == 'maintenance':
+        flash('Phòng đang bảo trì.', 'danger')
+        return redirect(url_for('guest.book'))
+
+    if ci == date.today() and room.status != 'available':
+        flash('Phòng chưa sẵn sàng nhận khách.', 'danger')
+        return redirect(url_for('guest.book'))
+
+    if room.base_price <= 0:
+        flash('Giá phòng không hợp lệ.', 'danger')
+        return redirect(url_for('guest.book'))
+
+    # Kiểm tra lịch trùng phòng
+    overlapping = Booking.query.filter(
+        Booking.room_id == room.id,
+        Booking.status.in_(['confirmed', 'checked_in']),
+        Booking.check_in < co,
+        Booking.check_out > ci
+    ).first()
+
+    if overlapping:
+        flash(
+            'Phòng đã được đặt trong khoảng thời gian này.',
+            'danger'
+        )
+        return redirect(url_for('guest.book'))
+
+    nights = (co - ci).days
+    total = round(room.base_price * nights, 2)
+
+    booking = Booking(
+        user_id=current_user.id,
+        room_id=room.id,
+        check_in=ci,
+        check_out=co,
+        total_price=total,
+        booking_source='online',
+        status='confirmed'
+    )
+
+    try:
+        db.session.add(booking)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash('Không thể tạo đặt phòng.', 'danger')
+        return redirect(url_for('guest.book'))
+
+    flash(
+        f'Đặt phòng {room.number} thành công! '
+        f'{nights} đêm - Tổng: {total:,.2f} AED',
+        'success'
+    )
+
     return redirect(url_for('guest.bookings'))
+
 
 
 @guest_bp.route('/bookings')

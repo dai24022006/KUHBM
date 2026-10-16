@@ -8,12 +8,14 @@ from routes.reception import reception_bp
 from routes.staff import staff_bp
 from routes.admin import admin_bp
 from routes.chat import chat_bp
+from flask_migrate import Migrate
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
     db.init_app(app)
+    Migrate(app, db, render_as_batch=True)
     bcrypt.init_app(app)
 
     login_manager = LoginManager(app)

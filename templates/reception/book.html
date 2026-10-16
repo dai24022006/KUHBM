@@ -1,0 +1,491 @@
+{% extends 'base.html' %} {% block title %}Đặt phòng tại quầy{% endblock %} {%
+block content %}
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-1">Đặt phòng tại quầy</h4>
+      <p class="text-muted mb-0">
+        Nhập thông tin khách và chọn phòng còn trống
+      </p>
+    </div>
+
+    <a
+      href="{{ url_for('reception.dashboard') }}"
+      class="btn btn-outline-secondary"
+    >
+      <i class="bi bi-arrow-left"></i> Quay lại
+    </a>
+  </div>
+
+  <form method="POST" action="{{ url_for('reception.book') }}" id="bookingForm">
+    <div class="row g-4">
+      <!-- THÔNG TIN KHÁCH -->
+      <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-4">
+              <i class="bi bi-person me-2"></i>
+              Thông tin khách hàng
+            </h5>
+
+            <div class="mb-3">
+              <label class="form-label">
+                Họ và tên <span class="text-danger">*</span>
+              </label>
+
+              <input
+                type="text"
+                name="guest_name"
+                id="guestName"
+                class="form-control"
+                maxlength="100"
+                required
+                placeholder="Nhập họ tên khách hàng"
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">
+                Số điện thoại <span class="text-danger">*</span>
+              </label>
+
+              <input
+                type="tel"
+                name="guest_phone"
+                id="guestPhone"
+                class="form-control"
+                inputmode="numeric"
+                maxlength="10"
+                pattern="0[0-9]{9}"
+                required
+                placeholder="Ví dụ: 0981234567"
+              />
+
+              <div class="form-text">Số điện thoại Việt Nam gồm 10 chữ số.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NGÀY NHẬN TRẢ -->
+      <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-4">
+              <i class="bi bi-calendar me-2"></i>
+              Thời gian lưu trú
+            </h5>
+
+            <div class="mb-3">
+              <label class="form-label"> Ngày nhận phòng </label>
+
+              <input
+                type="date"
+                id="checkIn"
+                name="check_in"
+                class="form-control"
+                value="{{ today }}"
+                min="{{ today }}"
+                required
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"> Ngày trả phòng </label>
+
+              <input
+                type="date"
+                id="checkOut"
+                name="check_out"
+                class="form-control"
+                value="{{ tomorrow }}"
+                min="{{ tomorrow }}"
+                required
+              />
+            </div>
+
+            <div class="alert alert-light border mb-0">
+              Số đêm:
+              <strong id="nightsText">0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHỌN PHÒNG -->
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="mb-3">
+              <i class="bi bi-door-open me-2"></i>
+              Chọn phòng
+            </h5>
+
+            <div
+              id="roomMessage"
+              class="small text-muted mb-3"
+              role="status"
+              aria-live="polite"
+            >
+              Đang tải danh sách phòng...
+            </div>
+
+            <select
+              class="form-select"
+              id="roomSelect"
+              name="room_id"
+              required
+              disabled
+            >
+              <option value="">-- Chọn phòng --</option>
+            </select>
+
+            <div class="mt-3 row g-3">
+              <div class="col-md-6">
+                <label class="form-label"> Loại phòng </label>
+                <input
+                  type="text"
+                  id="roomType"
+                  class="form-control"
+                  readonly
+                  placeholder="Chưa chọn phòng"
+                />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label"> Giá mỗi đêm (AED) </label>
+                <input
+                  type="text"
+                  id="roomPrice"
+                  class="form-control"
+                  readonly
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TỔNG TIỀN -->
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="mb-4">
+              <i class="bi bi-receipt me-2"></i>
+              Xác nhận đặt phòng
+            </h5>
+
+            <div class="d-flex justify-content-between mb-2">
+              <span>Số đêm</span>
+              <strong id="summaryNights">0</strong>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2">
+              <span>Đơn giá</span>
+              <strong id="summaryPrice">0.00 AED</strong>
+            </div>
+
+            <hr />
+
+            <div class="d-flex justify-content-between mb-4">
+              <h5>Tổng tiền</h5>
+              <h4 class="text-success" id="totalPrice">0.00 AED</h4>
+            </div>
+
+            <div class="form-check mb-4">
+              <input
+                type="checkbox"
+                name="checkin_now"
+                id="checkinNow"
+                class="form-check-input"
+              />
+
+              <label for="checkinNow" class="form-check-label">
+                Khách nhận phòng ngay
+              </label>
+            </div>
+
+            <div
+              id="formError"
+              class="alert alert-danger d-none"
+              role="alert"
+            ></div>
+
+            <button
+              type="submit"
+              id="submitBtn"
+              class="btn btn-success w-100"
+              disabled
+            >
+              <i class="bi bi-check-circle me-2"></i>
+              Xác nhận đặt phòng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const checkIn = document.getElementById("checkIn");
+    const checkOut = document.getElementById("checkOut");
+    const roomSelect = document.getElementById("roomSelect");
+    const roomMessage = document.getElementById("roomMessage");
+
+    const nightsText = document.getElementById("nightsText");
+    const roomType = document.getElementById("roomType");
+    const roomPrice = document.getElementById("roomPrice");
+
+    const summaryNights = document.getElementById("summaryNights");
+    const summaryPrice = document.getElementById("summaryPrice");
+    const totalPrice = document.getElementById("totalPrice");
+
+    const checkinNow = document.getElementById("checkinNow");
+    const submitBtn = document.getElementById("submitBtn");
+    const formError = document.getElementById("formError");
+
+    const form = document.getElementById("bookingForm");
+    const guestName = document.getElementById("guestName");
+    const guestPhone = document.getElementById("guestPhone");
+
+    let rooms = [];
+    let nights = 0;
+    let loading = false;
+    let requestVersion = 0;
+
+    const apiUrl = "{{ url_for('reception.available_rooms') }}";
+
+    function money(value) {
+      return (
+        Number(value).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }) + " AED"
+      );
+    }
+
+    function getToday() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function addDays(dateString, days) {
+      const [year, month, day] = dateString.split("-").map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      date.setUTCDate(date.getUTCDate() + days);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function getNights() {
+      if (!checkIn.value || !checkOut.value) return 0;
+
+      const start = Date.parse(checkIn.value + "T00:00:00Z");
+      const end = Date.parse(checkOut.value + "T00:00:00Z");
+
+      return Math.round((end - start) / 86400000);
+    }
+
+    function showError(message) {
+      formError.textContent = message;
+      formError.classList.remove("d-none");
+    }
+
+    function clearError() {
+      formError.textContent = "";
+      formError.classList.add("d-none");
+    }
+
+    function setRoomMessage(message, color = "text-muted") {
+      roomMessage.className = "small mb-3 " + color;
+      roomMessage.textContent = message;
+    }
+
+    function selectedRoom() {
+      return rooms.find((room) => String(room.id) === roomSelect.value);
+    }
+
+    function updateSubmit() {
+      const room = selectedRoom();
+
+      submitBtn.disabled = loading || !room || nights <= 0 || room.price <= 0;
+    }
+
+    function updateTotal() {
+      const room = selectedRoom();
+
+      const price = room ? Number(room.price) : 0;
+      const total = price * nights;
+
+      nightsText.textContent = nights;
+      summaryNights.textContent = nights;
+
+      roomType.value = room ? room.type : "";
+      roomPrice.value = room ? money(price) : "";
+
+      summaryPrice.textContent = money(price);
+      totalPrice.textContent = money(total);
+
+      // Chỉ được check-in ngay khi ngày nhận là hôm nay
+      checkinNow.disabled = checkIn.value !== getToday();
+
+      if (checkinNow.disabled) {
+        checkinNow.checked = false;
+      }
+
+      updateSubmit();
+    }
+
+    async function loadRooms() {
+      // Vô hiệu hóa kết quả từ những request cũ
+      const currentRequest = ++requestVersion;
+
+      rooms = [];
+      loading = true;
+
+      roomSelect.disabled = true;
+      roomSelect.innerHTML = '<option value="">-- Chọn phòng --</option>';
+
+      nights = getNights();
+      updateTotal();
+      clearError();
+
+      if (!checkIn.value || !checkOut.value || nights <= 0) {
+        loading = false;
+        setRoomMessage(
+          "Ngày trả phòng phải sau ngày nhận phòng.",
+          "text-danger",
+        );
+        updateSubmit();
+        return;
+      }
+
+      if (checkIn.value < getToday()) {
+        loading = false;
+        setRoomMessage("Không thể đặt phòng trong quá khứ.", "text-danger");
+        updateSubmit();
+        return;
+      }
+
+      setRoomMessage("Đang kiểm tra phòng trống...");
+
+      const params = new URLSearchParams({
+        check_in: checkIn.value,
+        check_out: checkOut.value,
+      });
+
+      try {
+        const response = await fetch(apiUrl + "?" + params.toString());
+
+        const data = await response.json();
+
+        if (currentRequest !== requestVersion) return;
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "Không thể tải danh sách phòng.");
+        }
+
+        rooms = data.rooms;
+        nights = data.nights;
+
+        if (rooms.length === 0) {
+          setRoomMessage(
+            "Không có phòng trống trong thời gian đã chọn.",
+            "text-danger",
+          );
+        } else {
+          rooms.forEach((room) => {
+            const option = document.createElement("option");
+            option.value = room.id;
+
+            option.textContent = `Phòng ${room.number} - ${room.type} - ${money(room.price)}`;
+
+            roomSelect.appendChild(option);
+          });
+
+          roomSelect.disabled = false;
+
+          setRoomMessage(`Có ${rooms.length} phòng còn trống.`, "text-success");
+        }
+      } catch (error) {
+        if (currentRequest !== requestVersion) return;
+
+        rooms = [];
+        setRoomMessage(error.message, "text-danger");
+      } finally {
+        if (currentRequest === requestVersion) {
+          loading = false;
+          updateTotal();
+        }
+      }
+    }
+
+    checkIn.addEventListener("change", () => {
+      // Tự điều chỉnh ngày trả nếu ngày hiện tại không hợp lệ
+      const minimum = addDays(checkIn.value, 1);
+      checkOut.min = minimum;
+
+      if (checkOut.value < minimum) {
+        checkOut.value = minimum;
+      }
+
+      loadRooms();
+    });
+
+    checkOut.addEventListener("change", loadRooms);
+
+    roomSelect.addEventListener("change", updateTotal);
+
+    form.addEventListener("submit", (event) => {
+      clearError();
+
+      const name = guestName.value.trim();
+      const phone = guestPhone.value.trim();
+
+      if (!name || name.length > 100) {
+        event.preventDefault();
+        showError("Họ tên khách hàng không hợp lệ.");
+        return;
+      }
+
+      if (!/^0[0-9]{9}$/.test(phone)) {
+        event.preventDefault();
+        showError("Số điện thoại phải gồm 10 chữ số và bắt đầu bằng 0.");
+        return;
+      }
+
+      if (checkIn.value < getToday() || nights <= 0) {
+        event.preventDefault();
+        showError("Ngày nhận hoặc trả phòng không hợp lệ.");
+        return;
+      }
+
+      if (!selectedRoom()) {
+        event.preventDefault();
+        showError("Vui lòng chọn một phòng còn trống.");
+        return;
+      }
+
+      if (checkinNow.checked && checkIn.value !== getToday()) {
+        event.preventDefault();
+        showError("Chỉ có thể nhận phòng ngay trong ngày hôm nay.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Đang xử lý...";
+    });
+
+    // Tải phòng trống lần đầu khi mở trang
+    checkOut.min = addDays(checkIn.value, 1);
+    loadRooms();
+  });
+</script>
+
+{% endblock %}
